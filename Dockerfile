@@ -22,8 +22,11 @@ RUN apt-get update \
     && docker-php-ext-install bcmath zip pdo_sqlite \
     && rm -rf /var/lib/apt/lists/*
 
+# Pastikan hanya satu MPM yang aktif (kalau dua aktif: AH00534 More than one MPM loaded)
+RUN a2dismod mpm_event mpm_worker || true
+
 # Port diisi saat container start oleh docker/entrypoint.sh dari env PORT
-RUN a2enmod rewrite \
+RUN a2enmod mpm_prefork rewrite \
     && sed -ri 's/^Listen 80$/Listen @APP_PORT@/' /etc/apache2/ports.conf
 
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
