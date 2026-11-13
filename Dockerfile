@@ -22,9 +22,9 @@ RUN apt-get update \
     && docker-php-ext-install bcmath zip pdo_sqlite \
     && rm -rf /var/lib/apt/lists/*
 
-# Render expects the service to listen on port 10000 by default
+# Port diisi saat container start oleh docker/entrypoint.sh dari env PORT
 RUN a2enmod rewrite \
-    && sed -ri 's/Listen 80/Listen 10000/' /etc/apache2/ports.conf
+    && sed -ri 's/^Listen 80$/Listen @APP_PORT@/' /etc/apache2/ports.conf
 
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
 
