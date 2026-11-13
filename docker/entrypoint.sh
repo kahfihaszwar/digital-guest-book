@@ -5,11 +5,13 @@ set -e
 PORT="${PORT:-10000}"
 sed -i "s/@APP_PORT@/$PORT/g" /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-# SQLite bisa berada di volume terpasang, jadi siapkan file + izin tulisnya di sini
-mkdir -p database storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
-[ -f database/database.sqlite ] || touch database/database.sqlite
-chown -R www-data:www-data database storage bootstrap/cache
-chmod -R ug+rwX database storage bootstrap/cache
+# SQLite biasanya diarahkan ke volume terpasang (DB_DATABASE), jadi siapkan file + izin tulisnya
+DB_FILE="${DB_DATABASE:-database/database.sqlite}"
+case "$DB_FILE" in /*) ;; *) DB_FILE="/var/www/html/$DB_FILE" ;; esac
+mkdir -p "$(dirname "$DB_FILE")" storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+[ -f "$DB_FILE" ] || touch "$DB_FILE"
+chown -R www-data:www-data "$(dirname "$DB_FILE")" storage bootstrap/cache
+chmod -R ug+rwX "$(dirname "$DB_FILE")" storage bootstrap/cache
 
 # Build the cached config from the real environment variables on every boot
 php artisan config:cache
