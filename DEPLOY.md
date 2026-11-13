@@ -1,53 +1,53 @@
 # Publikasi Buku Tamu
 
-## Cara yang dipakai sekarang: Cloudflare Tunnel (gratis, tanpa kartu)
+## Yang aktif sekarang: Railway (tanpa kartu)
 
-Cloudflare Workers tidak bisa menjalankan PHP, jadi yang dipakai adalah **Cloudflare Tunnel**: aplikasi Laravel tetap berjalan di PC ini dan Cloudflare memberi URL HTTPS publik.
+- URL publik: **https://buku-tamu-production-e0f2d7f8.up.railway.app**
+- Project: `buku-tamu` (workspace `kahfihaszwar's Projects`), environment `production`
+- Deploy dari folder lokal, bukan dari GitHub:
+  ```bash
+  railway up -y --service buku-tamu
+  ```
+  (CLI portable ada di `.tools/railway/railway.exe`)
+
+### Environment variables di Railway
+
+| Key | Nilai |
+| --- | --- |
+| `APP_NAME` | `Buku Tamu` |
+| `APP_ENV` | `production` |
+| `APP_DEBUG` | `false` |
+| `APP_KEY` | base64 key (51 karakter, tanpa `\r`) |
+| `APP_URL` | URL Railway di atas |
+| `LOG_CHANNEL` | `stderr` |
+| `DB_CONNECTION` | `sqlite` |
+| `SESSION_DRIVER` | `file` |
+| `CACHE_STORE` | `file` |
+| `QUEUE_CONNECTION` | `sync` |
+
+Memakai `file`/`sync` supaya tidak bergantung pada tabel database. SQLite dibuat ulang setiap container start, jadi data tidak bertahan antar deploy — kalau nanti buku tamu menyimpan entri, tambahkan Postgres milik Railway.
+
+### Hal yang sempat bikin gagal (jangan diubah tanpa alasan)
+
+1. **Port**: container mendengarkan `$PORT` (Railway menyuntik 8080). `Dockerfile` memakai placeholder `@APP_PORT@` yang diisi `docker/entrypoint.sh`.
+2. **MPM ganda**: image `php:8.4-apache` di runtime ternyata mengaktifkan `mpm_event` **dan** `mpm_prefork`, sehingga Apache mati dengan `AH00534: More than one MPM loaded`. Entrypoint sekarang menghapus `mpm_event`/`mpm_worker` sebelum start.
+3. **APP_KEY**: key yang dibuat lewat PowerShell/Windows bisa membawa `\r` sehingga muncul `Unsupported cipher or incorrect key length`. Key harus tepat 51 karakter.
+
+## Catatan paket gratis Railway
+
+- Tanpa kartu: trial **$5 / 30 hari**, setelah itu Free plan memberi **$1 credit per bulan** — app ini butuh sekitar $2–3/bulan, jadi siap-siap pindah ke Hobby ($5/bln) atau host lain.
+- URL `*.up.railway.app` tetap selama service aktif.
+
+## Alternatif: Cloudflare Tunnel
+
+Cloudflare Workers tidak bisa menjalankan PHP, jadi jalur gratis di Cloudflare adalah tunnel dari PC ini:
 
 ```bash
 sh serve-public.sh
 ```
 
-URL publik (`https://<kata-acak>.trycloudflare.com`) tercetak di terminal. Judul halaman sudah "Buku Tamu".
+URL `https://<kata-acak>.trycloudflare.com` muncul di terminal dan **berganti** setiap dijalankan ulang. PC harus menyala. URL tetap butuh domain sendiri yang Nameserver-nya di Cloudflare + named tunnel.
 
-Batasan yang perlu diketahui:
+## Alternatif: Render
 
-- **PC harus menyala** dan skrip tetap jalan; kalau PC mati/tunnel berhenti, situs ikut mati.
-- URL dari quick tunnel **acak dan berganti** setiap kali dijalankan ulang.
-- Untuk URL tetap (mis. `bukutamu.domainmu.com`) dibutuhkan **domain sendiri** yang Nameserver-nya di Cloudflare, lalu pakai named tunnel (`cloudflared tunnel create` + route DNS).
-
-## Alternatif: Render (butuh kartu terdaftar)
-
-Tujuan: website bisa diakses publik di **https://buku-tamu.onrender.com** tanpa biaya.
-
-## File yang sudah disiapkan
-
-| File | Fungsi |
-| --- | --- |
-| `Dockerfile` | Build 3 tahap: aset Vite/Tailwind → dependency Composer → runtime PHP 8.4 + Apache (listen port `10000`, sesuai default Render) |
-| `docker/apache-vhost.conf` | DocumentRoot diarahkan ke `public/` dan `mod_rewrite` aktif |
-| `docker/entrypoint.sh` | Jalankan `config:cache` + `migrate --force` setiap container start, lalu Apache |
-| `render.yaml` | Blueprint Render: web service **free**, region Singapore, Docker, health check `/up`, env produksi (`APP_ENV=production`, `APP_DEBUG=false`, `APP_KEY` digenerate otomatis) |
-| `.dockerignore` | Menyingkirkan `vendor`, `node_modules`, `.env`, build lokal dari konteks Docker |
-
-SQLite dipakai sebagai database; pada paket free disk bersifat sementara, jadi skema dibuat ulang setiap deploy.
-Session & cache memakai driver `file` supaya tidak bergantung pada tabel database.
-
-## Langkah aktivasi (butuh akun Render kamu, ±5 menit)
-
-1. **Push kode ke GitHub** (Render deploy dari repo Git):
-   ```bash
-   git remote add origin https://github.com/<username>/digital-guest-book.git
-   git push -u origin main
-   ```
-2. Buka [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → pilih repo di atas.
-   Render membaca `render.yaml` dan membuat service `buku-tamu` (plan Free).
-3. Klik **Apply** / **Create**, tunggu build pertama selesai (±5–10 menit karena build Docker).
-4. URL publik otomatis: **https://buku-tamu.onrender.com** (subdomain mengikuti nama service; kalau sudah dipakai orang lain, ganti `name:` di `render.yaml`).
-5. Setelah service hidup, pastikan `APP_URL` di Environment sudah `https://buku-tamu.onrender.com` — kalau nama service diganti, ubah juga nilai ini.
-
-## Catatan paket gratis Render
-
-- Instance tidur setelah ±15 menit tanpa traffic; request pertama setelah tidur butuh ±1 menit untuk bangun.
-- Disk sementara: data yang ditulis ke SQLite hilang saat redeploy/restart. Kalau nanti buku tamu sudah menyimpan entri, pakai Render Postgres (atau Neon) supaya data permanen.
-- Domain kustom (mis. `bukutamu.my.id`) bisa ditambahkan nanti di **Settings → Custom Domains** setelah domain dibeli.
+`render.yaml` sudah disiapkan (web service free, region Singapore, health check `/up`), tetapi pembuatan service lewat API ditolak Render dengan pesan *"Payment information is required"* — workspace-nya belum punya metode pembayaran. Plan Free Render tetap mewajibkan kartu terdaftar.
