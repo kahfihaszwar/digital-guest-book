@@ -23,10 +23,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Pastikan hanya satu MPM yang aktif (kalau dua aktif: AH00534 More than one MPM loaded)
-RUN a2dismod mpm_event mpm_worker || true
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
+    && ln -sf ../mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load
 
 # Port diisi saat container start oleh docker/entrypoint.sh dari env PORT
-RUN a2enmod mpm_prefork rewrite \
+RUN a2enmod rewrite \
     && sed -ri 's/^Listen 80$/Listen @APP_PORT@/' /etc/apache2/ports.conf
 
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf

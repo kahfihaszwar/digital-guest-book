@@ -11,4 +11,5 @@ php artisan config:cache
 # The free instance has an ephemeral filesystem, so the SQLite schema is (re)created each deploy
 php artisan migrate --force --no-interaction
 
+echo "MPM yang aktif: $(ls /etc/apache2/mods-enabled/ | grep -i '^mpm' | tr '\n' ' ')"
 exec apache2-foreground
