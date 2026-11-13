@@ -24,8 +24,21 @@
 | `SESSION_DRIVER` | `file` |
 | `CACHE_STORE` | `file` |
 | `QUEUE_CONNECTION` | `sync` |
+| `DB_DATABASE` | `/data/database.sqlite` |
 
-Memakai `file`/`sync` supaya tidak bergantung pada tabel database. SQLite dibuat ulang setiap container start, jadi data tidak bertahan antar deploy — kalau nanti buku tamu menyimpan entri, tambahkan Postgres milik Railway.
+### Penyimpanan data buku tamu
+
+SQLite disimpan di **volume Railway** (`buku-tamu-volume`, 500 MB) yang di-mount ke `/data`, lalu diarahkan lewat `DB_DATABASE`. Dengan begitu pesan tamu bertahan walau redeploy (sudah diuji: deploy ulang tidak menghapus entri).
+
+Jangan mount volume ke `/var/www/html/database` — itu menutupi folder `database/` sehingga file migration hilang dan `php artisan migrate` melaporkan "Nothing to migrate" (tabel tidak pernah dibuat).
+
+Memakai `SESSION_DRIVER=file` dan `CACHE_STORE=file` supaya session/cache tidak bergantung pada tabel database.
+
+## Fitur buku tamu
+
+- `GET /` → form nama + pesan dan daftar pesan terbaru (10 per halaman)
+- `POST /entries` → simpan pesan (validasi nama ≤60, pesan ≤500 karakter, honeypot `website`, throttle 10 request/menit)
+- Tabel `guestbook_entries` (nama, pesan, IP, timestamps)
 
 ### Hal yang sempat bikin gagal (jangan diubah tanpa alasan)
 
