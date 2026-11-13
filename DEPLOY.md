@@ -1,4 +1,22 @@
-# Deploy Buku Tamu ke Render (subdomain gratis)
+# Publikasi Buku Tamu
+
+## Cara yang dipakai sekarang: Cloudflare Tunnel (gratis, tanpa kartu)
+
+Cloudflare Workers tidak bisa menjalankan PHP, jadi yang dipakai adalah **Cloudflare Tunnel**: aplikasi Laravel tetap berjalan di PC ini dan Cloudflare memberi URL HTTPS publik.
+
+```bash
+sh serve-public.sh
+```
+
+URL publik (`https://<kata-acak>.trycloudflare.com`) tercetak di terminal. Judul halaman sudah "Buku Tamu".
+
+Batasan yang perlu diketahui:
+
+- **PC harus menyala** dan skrip tetap jalan; kalau PC mati/tunnel berhenti, situs ikut mati.
+- URL dari quick tunnel **acak dan berganti** setiap kali dijalankan ulang.
+- Untuk URL tetap (mis. `bukutamu.domainmu.com`) dibutuhkan **domain sendiri** yang Nameserver-nya di Cloudflare, lalu pakai named tunnel (`cloudflared tunnel create` + route DNS).
+
+## Alternatif: Render (butuh kartu terdaftar)
 
 Tujuan: website bisa diakses publik di **https://buku-tamu.onrender.com** tanpa biaya.
 
